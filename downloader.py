@@ -180,7 +180,12 @@ def get_formats(url: str) -> list[dict]:
         items.append(
             {
                 "label": f"{height}p ({entry['ext']}, {_format_size(entry['_size'])})",
+                # Спершу H.264: AV1 у mp4 не відкривають стандартний плеер Windows
+                # і старі пристрої. Висота точна: з <= на 1440p тихо приходив
+                # H.264 1080p. YouTube дає H.264 лише до 1080p — вище спрацює
+                # наступний варіант.
                 "format_id": (
+                    f"bestvideo[vcodec^=avc1][height={height}]+bestaudio[ext=m4a]/"
                     f"bestvideo[ext=mp4][height<={height}]+bestaudio[ext=m4a]/"
                     f"bestvideo[height<={height}]+bestaudio/"
                     f"best[height<={height}]"

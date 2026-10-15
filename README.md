@@ -53,6 +53,7 @@ YouTube ламає видобувач раз на кілька тижнів; с�
 
 ```powershell
 python -m pip install customtkinter pyinstaller
+winget install -e --id Gyan.FFmpeg   # якщо ffmpeg ще немає; потім новий термінал
 $ff = (Get-Command ffmpeg).Source
 python -m PyInstaller --noconfirm --clean --onefile --windowed `
   --name VideoDownloader --collect-all customtkinter `
