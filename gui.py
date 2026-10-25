@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import tkinter
+import webbrowser
 from pathlib import Path
 from tkinter import Menu, filedialog, messagebox
 
@@ -14,16 +15,29 @@ import customtkinter as ctk
 
 import downloader
 
-ctk.set_appearance_mode("Light")
+ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
+
+# Підвал: автор і посилання. TODO: замінити AUTHOR_URL на сайт/презентацію автора.
+AUTHOR_NAME = "Григорій Йовдій"
+AUTHOR_URL = "https://github.com/Gregory-Ivd"
+
+BG = "#0F172A"
+CARD = "#1E293B"
+FIELD = "#0F172A"
+ACCENT = "#6366F1"
+ACCENT_HOVER = "#4F46E5"
+MUTED = "#94A3B8"
+TEXT = "#F1F5F9"
 
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Smart Attic")
-        self.geometry("600x470")
-        self.minsize(540, 440)
+        self.geometry("640x640")
+        self.minsize(580, 600)
+        self.configure(fg_color=BG)
 
         self.output_dir = Path.home() / "Downloads"
         self.formats: list[dict] = []
@@ -36,65 +50,155 @@ class App(ctk.CTk):
     # ---------- інтерфейс ----------
 
     def _build_widgets(self):
-        ctk.CTkLabel(self, text="Smart Attic", font=("", 20, "bold")).pack(padx=16, pady=(16, 4))
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", padx=24, pady=(22, 10))
+        ctk.CTkLabel(
+            header, text="Smart Attic", font=("Segoe UI", 26, "bold"), text_color=TEXT
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            header,
+            text="Завантажувач відео · без реклами · рушій оновлюється одним кліком",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+        ).pack(anchor="w")
 
-        row_url = ctk.CTkFrame(self, fg_color="transparent")
-        row_url.pack(fill="x", padx=16, pady=6)
+        # Картка: посилання і якість
+        card_src = self._card()
+        row_url = ctk.CTkFrame(card_src, fg_color="transparent")
+        row_url.pack(fill="x", padx=16, pady=(16, 8))
         self.entry_url = ctk.CTkEntry(
-            row_url, placeholder_text="Встав посилання на YouTube або Facebook"
+            row_url,
+            height=40,
+            corner_radius=10,
+            fg_color=FIELD,
+            border_color="#334155",
+            placeholder_text="Встав посилання на YouTube або Facebook",
         )
         self.entry_url.pack(side="left", fill="x", expand=True)
         self._enable_paste(self.entry_url)
         self.btn_analyze = ctk.CTkButton(
-            row_url, text="Аналізувати", width=120, command=self.on_analyze
+            row_url,
+            text="Аналізувати",
+            width=120,
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            command=self.on_analyze,
         )
         self.btn_analyze.pack(side="left", padx=(8, 0))
 
-        row_quality = ctk.CTkFrame(self, fg_color="transparent")
-        row_quality.pack(fill="x", padx=16, pady=6)
-        ctk.CTkLabel(row_quality, text="Якість:").pack(side="left")
-        self.combo_quality = ctk.CTkComboBox(row_quality, values=[""], state="disabled")
-        self.combo_quality.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        row_quality = ctk.CTkFrame(card_src, fg_color="transparent")
+        row_quality.pack(fill="x", padx=16, pady=(0, 16))
+        ctk.CTkLabel(row_quality, text="Якість", text_color=MUTED).pack(side="left")
+        self.combo_quality = ctk.CTkComboBox(
+            row_quality,
+            values=[""],
+            state="disabled",
+            height=36,
+            corner_radius=10,
+            fg_color=FIELD,
+            border_color="#334155",
+            button_color="#334155",
+        )
+        self.combo_quality.pack(side="left", fill="x", expand=True, padx=(12, 0))
 
-        row_folder = ctk.CTkFrame(self, fg_color="transparent")
-        row_folder.pack(fill="x", padx=16, pady=6)
+        # Картка: папка
+        card_dst = self._card()
+        row_folder = ctk.CTkFrame(card_dst, fg_color="transparent")
+        row_folder.pack(fill="x", padx=16, pady=14)
         self.label_folder = ctk.CTkLabel(
-            row_folder, text=f"Папка: {self.output_dir}", anchor="w"
+            row_folder, text=f"Папка: {self.output_dir}", anchor="w", text_color=TEXT
         )
         self.label_folder.pack(side="left", fill="x", expand=True)
         ctk.CTkButton(
-            row_folder, text="Обрати...", width=100, command=self.on_choose_folder
+            row_folder,
+            text="Обрати…",
+            width=100,
+            height=34,
+            corner_radius=10,
+            fg_color="#334155",
+            hover_color="#475569",
+            command=self.on_choose_folder,
         ).pack(side="left", padx=(8, 0))
 
-        self.btn_download = ctk.CTkButton(self, text="Download", command=self.on_download)
-        self.btn_download.pack(padx=16, pady=(10, 6), fill="x")
+        self.btn_download = ctk.CTkButton(
+            self,
+            text="Завантажити",
+            height=48,
+            corner_radius=12,
+            font=("Segoe UI", 16, "bold"),
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            command=self.on_download,
+        )
+        self.btn_download.pack(padx=24, pady=(6, 10), fill="x")
 
-        self.progress = ctk.CTkProgressBar(self)
+        self.progress = ctk.CTkProgressBar(
+            self, height=10, corner_radius=5, progress_color=ACCENT, fg_color=CARD
+        )
         self.progress.set(0)
-        self.progress.pack(padx=16, pady=6, fill="x")
+        self.progress.pack(padx=24, pady=(0, 6), fill="x")
+
+        self.label_status = ctk.CTkLabel(
+            self, text="Готово до роботи", anchor="w", text_color=MUTED
+        )
+        self.label_status.pack(padx=24, pady=(0, 8), fill="x")
 
         self.btn_play = ctk.CTkButton(
             self,
-            text="▶ Відтворити останній файл",
-            fg_color="gray50",
-            hover_color="gray40",
+            text="▶  Відтворити останній файл",
+            height=38,
+            corner_radius=10,
+            fg_color=CARD,
+            hover_color="#334155",
             command=self.on_play_last,
         )
-        self.btn_play.pack(padx=16, pady=6, fill="x")
+        self.btn_play.pack(padx=24, pady=(0, 12), fill="x")
 
-        self.label_status = ctk.CTkLabel(self, text="Готово до роботи", anchor="w")
-        self.label_status.pack(padx=16, pady=(6, 2), fill="x")
-
+        # Рушій
         row_tools = ctk.CTkFrame(self, fg_color="transparent")
-        row_tools.pack(fill="x", padx=16, pady=(0, 12))
+        row_tools.pack(fill="x", padx=24, pady=(0, 8))
         self.label_engine = ctk.CTkLabel(
-            row_tools, text="yt-dlp: перевіряю...", anchor="w", text_color="gray50"
+            row_tools, text="yt-dlp: перевіряю...", anchor="w", text_color=MUTED
         )
         self.label_engine.pack(side="left", fill="x", expand=True)
         self.btn_update = ctk.CTkButton(
-            row_tools, text="Оновити yt-dlp", width=140, command=self.on_update_engine
+            row_tools,
+            text="Оновити yt-dlp",
+            width=140,
+            height=30,
+            corner_radius=8,
+            fg_color="transparent",
+            border_width=1,
+            border_color=ACCENT,
+            text_color=TEXT,
+            hover_color=CARD,
+            command=self.on_update_engine,
         )
         self.btn_update.pack(side="left", padx=(8, 0))
+
+        # Підвал
+        footer = ctk.CTkFrame(self, fg_color="transparent")
+        footer.pack(side="bottom", fill="x", padx=24, pady=(0, 14))
+        ctk.CTkFrame(footer, height=1, fg_color="#334155").pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(
+            footer, text="Розробник:", text_color=MUTED, font=("Segoe UI", 12)
+        ).pack(side="left")
+        link = ctk.CTkLabel(
+            footer,
+            text=AUTHOR_NAME,
+            text_color="#818CF8",
+            cursor="hand2",
+            font=("Segoe UI", 12, "underline"),
+        )
+        link.pack(side="left", padx=(6, 0))
+        link.bind("<Button-1>", lambda _e: webbrowser.open(AUTHOR_URL))
+
+    def _card(self):
+        card = ctk.CTkFrame(self, fg_color=CARD, corner_radius=14)
+        card.pack(fill="x", padx=24, pady=6)
+        return card
 
     def _enable_paste(self, entry):
         """Ctrl+V прив'язаний Tkinter до символу 'v' — на нелатинських розкладках
@@ -193,7 +297,7 @@ class App(ctk.CTk):
         if labels:
             self.combo_quality.set(labels[0])
         self.btn_analyze.configure(state="normal", text="Аналізувати")
-        self.label_status.configure(text="Обери якість і натисни Download")
+        self.label_status.configure(text="Обери якість і натисни «Завантажити»")
 
     def _analyze_failed(self, error: str):
         self.btn_analyze.configure(state="normal", text="Аналізувати")
@@ -244,11 +348,11 @@ class App(ctk.CTk):
         self.last_file = result_path
         self.progress.set(1)
         self.label_status.configure(text="Готово!")
-        self.btn_download.configure(state="normal", text="Download")
+        self.btn_download.configure(state="normal", text="Завантажити")
         messagebox.showinfo("Успіх", "Відео завантажено:\n" + str(result_path))
 
     def _download_failed(self, error: str):
-        self.btn_download.configure(state="normal", text="Download")
+        self.btn_download.configure(state="normal", text="Завантажити")
         self.label_status.configure(text="Помилка завантаження")
         messagebox.showerror("Помилка", error)
 
