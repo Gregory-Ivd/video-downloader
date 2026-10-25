@@ -18,9 +18,9 @@ import downloader
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-# Підвал: автор і посилання. TODO: замінити AUTHOR_URL на сайт/презентацію автора.
+# Підвал: автор і посилання на сайт автора.
 AUTHOR_NAME = "Григорій Йовдій"
-AUTHOR_URL = "https://github.com/Gregory-Ivd"
+AUTHOR_URL = "https://gregory-ivd.github.io/smart-attic/"
 
 BG = "#0F172A"
 CARD = "#1E293B"
